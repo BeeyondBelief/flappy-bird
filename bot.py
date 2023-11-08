@@ -1,25 +1,20 @@
+import functools
+import pathlib
+from collections.abc import Callable
+import pygame
 import neat
 
-from bob import *
-
-generation = 0  # note that the first generation of the birds is 0 because index starts from zero. XD
-max_gen = 50  # the maximum number of generation to run
-prob_threshold_to_jump = 0.8  # the probability threshold to activate the bird to jump
-failed_punishment = 10  # the amount of fitness decrease after collision
+from bob import Bird, Game, BalloonSpawner
 
 
 class Bot:
-    models = []
-    genomes = []
-    birds = []
-    generation = 0
-    max_score = -1
-
     def __init__(self, game: Game):
         self.game = game
-        self.birds.append(game.bird)
-        self.grounds = game.grounds
-        self.balloons = game.balloons
+        self.models = []
+        self.genomes = []
+        self.generation = 0
+        self.max_score = -1
+        self.birds: list[Bird] = []
 
     def __next__(self):
         self.generation += 1
@@ -31,16 +26,77 @@ class Bot:
             model = neat.nn.FeedForwardNetwork.create(genome, config="neatcfg.txt")
             self.models.append(model)  # append the neural network in the list
 
-    def check_bot(self):
-        if self.score >= self.max_score or len(self.birds) == 0:
-            self.game.stop = True
 
-    def on_fail(self, index):
-        self.models.pop(index)
-        self.genomes.pop(index)
-        self.birds.pop(index)
+class Net:
+    def __init__(self):
+        self.config = self._load_config(pathlib.Path(__file__).parent / 'feedforward.conf')
+        self._p = neat.Population(self.config)
 
-    def train_step(self):
-        for index, bird in self.birds:
-            bird.update()
-            dx1 = bird.rect.x
+    def enable_reporter(self):
+        self._p.add_reporter(neat.StdOutReporter(show_species_detail=True))
+        self._p.add_reporter(neat.StatisticsReporter())
+
+    def run(self, fittness_func: Callable[[list[tuple[int, neat.DefaultGenome]]], neat.Config],
+            times: int = 0):
+        return self._p.run(fittness_func, times)
+
+    @staticmethod
+    def _load_config(path: pathlib.Path) -> neat.Config:
+        return neat.Config(neat.DefaultGenome, neat.DefaultReproduction, neat.DefaultSpeciesSet,
+                           neat.DefaultStagnation, path)
+
+
+def run_for_q_learning(game: Game) -> None:
+    net = Net()
+    net.run(functools.partial(_q_learning_game, game), 50)
+
+
+def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], config: neat.Config) -> None:
+    game.reset()
+    birds_mapping: dict[int, tuple[Bird, neat.DefaultGenome, neat.nn.FeedForwardNetwork]] = {}
+    for genome_id, genome in gens:
+        birds_mapping[genome_id] = (
+            Bird((game.width * 0.2, game.height // 3)),
+            genome,
+            neat.nn.FeedForwardNetwork.create(genome, config)
+        )
+        game.attach_to_game(birds_mapping[genome_id][0])
+        genome.fitness = 0
+    max_balloons = 5
+    spawner = BalloonSpawner(max_balloons)
+    game.add_spawner(spawner)
+    running = True
+    while running:
+        if len(birds_mapping) == 0:
+            break
+        game.tick(60)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+        game.update()
+
+        for (bird, genome, net) in birds_mapping.values():
+            genome.fitness += 0.1
+            balloons_posses = [0] * max_balloons * 2
+            for i, x in enumerate(spawner.balloons.sprites()):
+                balloons_posses[i] = x.rect.x
+                balloons_posses[i+1] = x.rect.y
+            if net.activate((bird.rect.y, *balloons_posses))[0] > 0.5:
+                bird.jump()
+
+        remove_birds = []
+        for i, (bird, genome, _) in birds_mapping.items():
+            if game.bird_collide_with_any(bird):
+                genome.fitness -= 1
+                remove_birds.append(i)
+                bird.kill()
+            if bird.score_change:
+                genome += 5
+        for i in remove_birds:
+            del birds_mapping[i]
+
+        pygame.display.update()
+
+
+if __name__ == '__main__':
+    run_for_q_learning(Game(screen=pygame.display.set_mode((600, 700))))
