@@ -155,8 +155,9 @@ class Score(UpdateSpriteGame):
 
 
 class BalloonSpawner(UpdateByGame):
-    def __init__(self):
+    def __init__(self, max_balloons_in_screen: int):
         self.balloons = UpdateGroupByGame()
+        self.max_balloons_in_screen = max_balloons_in_screen
 
     @property
     def group(self) -> pygame.sprite.Group:
@@ -171,7 +172,8 @@ class BalloonSpawner(UpdateByGame):
 
     def update(self, game: 'Game') -> None:
         self.balloons.update(game)
-        if pygame.time.get_ticks() % BALLOON_SPAWN_RATE == 0 and len(self.balloons) < 5:
+        if (pygame.time.get_ticks() % BALLOON_SPAWN_RATE == 0
+                and len(self.balloons) < self.max_balloons_in_screen):
             self.spawn_balloon()
 
     def spawn_balloon(self) -> None:
@@ -225,7 +227,7 @@ class Game:
         self.attach_to_game(spawner)
 
     def bird_collide_with_any(self, bird: Bird) -> bool:
-        if bird.collide_with_any([*[x.group for x in self.spawners], self.grounds]):
+        if bird.collide_with_any([self.grounds, *[x.group for x in self.spawners]]):
             return True
         return False
 
@@ -251,7 +253,7 @@ class Game:
 def run_once_for_player(game: 'Game', tick: int = 60):
     score = Score(SCREEN_WIDTH * 0.85, SCREEN_HEIGHT - GROUND_HEIGHT * 2)
     bird = Bird((SCREEN_WIDTH * 0.2, SCREEN_HEIGHT // 3))
-    game.add_spawner(BalloonSpawner())
+    game.add_spawner(BalloonSpawner(5))
     game.attach_to_game(bird)
     game.attach_to_game(score)
     while not game.stop:
