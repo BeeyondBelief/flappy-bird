@@ -158,6 +158,10 @@ class BalloonSpawner(UpdateByGame):
     def __init__(self, max_balloons_in_screen: int):
         self.balloons = UpdateGroupByGame()
         self.max_balloons_in_screen = max_balloons_in_screen
+        self.balloon_radius = BALLOON_WIDTH // 2
+        self.balloon_spawn_right = SCREEN_WIDTH + self.balloon_radius
+        self.balloon_spawn_top = CEILING_HEIGHT + self.balloon_radius
+        self.balloon_spawn_bottom = SCREEN_HEIGHT - GROUND_HEIGHT - self.balloon_radius
 
     @property
     def group(self) -> pygame.sprite.Group:
@@ -177,20 +181,18 @@ class BalloonSpawner(UpdateByGame):
             self.spawn_balloon()
 
     def spawn_balloon(self) -> None:
-        balloon_radius = BALLOON_WIDTH // 2
-        min_distance = balloon_radius * 3
+        min_distance = self.balloon_radius * 3
 
         tries = 10
         while tries:
-            balloon_center_x = SCREEN_WIDTH + balloon_radius
-            balloon_center_y = random.randint(balloon_radius, SCREEN_HEIGHT - balloon_radius)
-            new_balloon_position = (balloon_center_x, balloon_center_y)
+            balloon_center_y = random.randint(self.balloon_spawn_top, self.balloon_spawn_bottom)
+            new_balloon_position = (self.balloon_spawn_right, balloon_center_y)
             if self._is_balloon_radius_free(new_balloon_position, min_distance):
                 break
             tries -= 1
         else:
             return
-        self.balloons.add(Balloon((balloon_center_x, balloon_center_y)))
+        self.balloons.add(Balloon((self.balloon_spawn_right, balloon_center_y)))
 
     def _is_balloon_radius_free(self, new_balloon_position: tuple[int, int], free_radius: float):
         new_x, new_y = new_balloon_position
