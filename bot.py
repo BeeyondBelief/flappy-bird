@@ -92,7 +92,7 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
                 remove_birds.append(i)
                 bird.kill()
             if bird.score_change:
-                genome += 5
+                genome.fitness += 5
         for i in remove_birds:
             del birds_mapping[i]
 
