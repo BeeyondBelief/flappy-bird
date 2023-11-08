@@ -65,9 +65,7 @@ class Bird(UpdateSpriteGame):
         else:
             self.image = bird_downflap_img
 
-        for balloon in game.balloons:
-            if balloon.check_passed(self):
-                self.score += 1
+        self.score += game.bird_fly_balloons_count_diff(self)
         game.screen.blit(self.image, self.rect)
 
     def jump(self):
@@ -154,42 +152,27 @@ class Score(UpdateSpriteGame):
         game.screen.blit(score_text, (self.x - score_text.get_width() // 2, self.y))
 
 
-class Game:
-    def __init__(self, screen: pygame.surface.Surface):
-        self.screen = screen
-        self.width = screen.get_width()
-        self.height = screen.get_height()
-        self.grounds = UpdateGroupByGame()
+class BalloonSpawner(UpdateByGame):
+    def __init__(self):
         self.balloons = UpdateGroupByGame()
-        self.clock = pygame.time.Clock()
-        self.stop = False
-        self.grounds.add(
-            Ground(SCREEN_WIDTH, GROUND_HEIGHT),
-            Ceiling(SCREEN_WIDTH, CEILING_HEIGHT)
-        )
-        self.updated_by_game: list[UpdateByGame] = [self.grounds, self.balloons]
 
-    def tick(self, framerate: float) -> None:
-        self.clock.tick(framerate)
+    @property
+    def group(self) -> pygame.sprite.Group:
+        return self.balloons
 
-    def attach_to_game(self, obj: UpdateByGame) -> None:
-        self.updated_by_game.append(obj)
+    def bird_fly_balloons_diff(self, bird: Bird) -> int:
+        count = 0
+        for b in self.balloons:
+            if b.check_passed(bird):
+                count += 1
+        return count
 
-    def bird_collide_with_any(self, bird: Bird) -> bool:
-        if bird.collide_with_any([self.balloons, self.grounds]):
-            return True
-        return False
-
-    def update(self):
-        self.screen.blit(background, background.get_rect())
-        if pygame.time.get_ticks() % BALLOON_SPAWN_RATE == 0:
+    def update(self, game: 'Game') -> None:
+        self.balloons.update(game)
+        if pygame.time.get_ticks() % BALLOON_SPAWN_RATE == 0 and len(self.balloons) < 5:
             self.spawn_balloon()
-        for upd in self.updated_by_game:
-            upd.update(self)
 
     def spawn_balloon(self) -> None:
-        if len(self.balloons) > 5:
-            return
         balloon_radius = BALLOON_WIDTH // 2
         min_distance = balloon_radius * 3
 
@@ -203,11 +186,7 @@ class Game:
             tries -= 1
         else:
             return
-
-        # Calculate the position of the balloon
-        balloon_position = (balloon_center_x, balloon_center_y)
-        balloon = Balloon(balloon_position)
-        self.balloons.add(balloon)
+        self.balloons.add(Balloon((balloon_center_x, balloon_center_y)))
 
     def _is_balloon_radius_free(self, new_balloon_position: tuple[int, int], free_radius: float):
         new_x, new_y = new_balloon_position
@@ -217,18 +196,61 @@ class Game:
                 return False
         return True
 
+
+class Game:
+    def __init__(self, screen: pygame.surface.Surface):
+        self.screen = screen
+        self.width = screen.get_width()
+        self.height = screen.get_height()
+        self.grounds = UpdateGroupByGame()
+        self.clock = pygame.time.Clock()
+        self.stop = False
+        self.grounds.add(
+            Ground(SCREEN_WIDTH, GROUND_HEIGHT),
+            Ceiling(SCREEN_WIDTH, CEILING_HEIGHT)
+        )
+        self.updated_by_game: list[UpdateByGame] = [self.grounds]
+        self.spawners: list[BalloonSpawner] = []
+
+    def tick(self, framerate: float) -> None:
+        self.clock.tick(framerate)
+
+    def attach_to_game(self, obj: UpdateByGame) -> None:
+        self.updated_by_game.append(obj)
+
+    def add_spawner(self, spawner: BalloonSpawner):
+        self.spawners.append(spawner)
+        self.attach_to_game(spawner)
+
+    def bird_collide_with_any(self, bird: Bird) -> bool:
+        if bird.collide_with_any([*[x.group for x in self.spawners], self.grounds]):
+            return True
+        return False
+
+    def bird_fly_balloons_count_diff(self, bird: Bird) -> int:
+        count = 0
+        for spawner in self.spawners:
+            count += spawner.bird_fly_balloons_diff(bird)
+        return count
+
+    def update(self):
+        self.screen.blit(background, background.get_rect())
+        for upd in self.updated_by_game:
+            upd.update(self)
+
     def reset(self):
         if self.stop:
             raise SystemExit()
-        self.balloons = UpdateGroupByGame()
         self.stop = False
-        self.updated_by_game: list[UpdateByGame] = [self.grounds, self.balloons]
+        self.updated_by_game: list[UpdateByGame] = [self.grounds]
+        self.spawners = []
 
 
 def run_once_for_player(game: 'Game', tick: int = 60):
     running = True
     score = Score(SCREEN_WIDTH * 0.85, SCREEN_HEIGHT - GROUND_HEIGHT * 2)
     bird = Bird((SCREEN_WIDTH * 0.2, SCREEN_HEIGHT // 3))
+    game.add_spawner(BalloonSpawner())
     game.attach_to_game(bird)
     game.attach_to_game(score)
     while running:
