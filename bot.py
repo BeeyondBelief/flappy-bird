@@ -1,5 +1,6 @@
 import functools
 import pathlib
+import pickle
 from collections.abc import Callable
 import pygame
 import neat
@@ -49,7 +50,9 @@ class Net:
 def run_for_q_learning(game: Game) -> None:
     net = Net()
     net.enable_reporter()
-    net.run(functools.partial(_q_learning_game, game), 50)
+    best = net.run(functools.partial(_q_learning_game, game), 100)
+    with open('dump.obj', 'wb') as f:
+        pickle.dump(best, f)
 
 
 def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], config: neat.Config) -> None:
