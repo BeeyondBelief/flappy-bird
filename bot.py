@@ -70,7 +70,7 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
     while running:
         if len(birds_mapping) == 0:
             break
-        game.tick(60)
+        game.tick()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -101,4 +101,4 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
 
 
 if __name__ == '__main__':
-    run_for_q_learning(Game(screen=pygame.display.set_mode((600, 700))))
+    run_for_q_learning(Game(screen=pygame.display.set_mode((600, 700)), framerate=120))

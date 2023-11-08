@@ -202,8 +202,9 @@ class BalloonSpawner(UpdateByGame):
 
 
 class Game:
-    def __init__(self, screen: pygame.surface.Surface):
+    def __init__(self, screen: pygame.surface.Surface, framerate: float):
         self.screen = screen
+        self.framerate = framerate
         self.width = screen.get_width()
         self.height = screen.get_height()
         self.grounds = UpdateGroupByGame()
@@ -216,8 +217,8 @@ class Game:
         self.updated_by_game: list[UpdateByGame] = [self.grounds]
         self.spawners: list[BalloonSpawner] = []
 
-    def tick(self, framerate: float) -> None:
-        self.clock.tick(framerate)
+    def tick(self) -> None:
+        self.clock.tick(self.framerate)
 
     def attach_to_game(self, obj: UpdateByGame) -> None:
         self.updated_by_game.append(obj)
@@ -250,7 +251,7 @@ class Game:
         self.spawners = []
 
 
-def run_once_for_player(game: 'Game', tick: int = 60):
+def run_once_for_player(game: 'Game'):
     running = True
     score = Score(SCREEN_WIDTH * 0.85, SCREEN_HEIGHT - GROUND_HEIGHT * 2)
     bird = Bird((SCREEN_WIDTH * 0.2, SCREEN_HEIGHT // 3))
@@ -258,7 +259,7 @@ def run_once_for_player(game: 'Game', tick: int = 60):
     game.attach_to_game(bird)
     game.attach_to_game(score)
     while running:
-        game.tick(tick)
+        game.tick()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game.stop = True
@@ -277,10 +278,10 @@ def run_once_for_player(game: 'Game', tick: int = 60):
 def main():
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    game = Game(screen)
+    game = Game(screen, framerate=60)
 
     while True:
-        run_once_for_player(game, tick=60)
+        run_once_for_player(game)
         game.reset()
 
 
