@@ -251,16 +251,18 @@ class Game:
 
 
 def run_once_for_player(game: 'Game', tick: int = 60):
+    running = True
     score = Score(SCREEN_WIDTH * 0.85, SCREEN_HEIGHT - GROUND_HEIGHT * 2)
     bird = Bird((SCREEN_WIDTH * 0.2, SCREEN_HEIGHT // 3))
     game.add_spawner(BalloonSpawner(5))
     game.attach_to_game(bird)
     game.attach_to_game(score)
-    while not game.stop:
+    while running:
         game.tick(tick)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game.stop = True
+                running = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     bird.jump()
@@ -268,6 +270,7 @@ def run_once_for_player(game: 'Game', tick: int = 60):
         score.value = bird.score
         if game.bird_collide_with_any(bird):
             bird.kill()
+            running = False
         pygame.display.update()
 
 
