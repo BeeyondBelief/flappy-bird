@@ -157,6 +157,8 @@ class Score(UpdateSpriteGame):
 class Game:
     def __init__(self, screen: pygame.surface.Surface):
         self.screen = screen
+        self.width = screen.get_width()
+        self.height = screen.get_height()
         self.grounds = UpdateGroupByGame()
         self.balloons = UpdateGroupByGame()
         self.clock = pygame.time.Clock()
