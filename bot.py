@@ -73,6 +73,7 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                game.stop = True
         game.update()
 
         for (bird, genome, net) in birds_mapping.values():
