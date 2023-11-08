@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flappy_bird"
+version = '0.0.1'
+description = ""
+requires-python = ">=3.12"
+authors = [
+    { name = "Зорин Никита Евгеньевич", email = "nikita00zorinnn@mail.ru" },
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python",
+    "Typing :: Typed",
+]
+dependencies = [
+    "pygame~=2.5",
+    "neat-python~=0.9"
+]
+
+[project.optional-dependencies]
+tests = [
+    "pytest~=7.2",
+]
+mypy = [
+    "mypy~=1.1",
+    "mypy-extensions~=1.0",
+]
+
+[tool.mypy]
+strict = true
+exclude = [
+    '^test_*.py$',
+    '^conftest.py$',
+]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+]
