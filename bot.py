@@ -87,19 +87,21 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
             x = abs(sprites[i].rect.x / spawner.balloon_spawn_right)
             y = abs(sprites[i].rect.y / spawner.balloon_spawn_bottom)
             balloons_posses[i] = (x*y)
-        for (bird, genome, net) in birds_mapping.values():
+        remove_birds = []
+        for i, (bird, genome, net) in birds_mapping.items():
             genome.fitness += 0.1
+
+            if bird.score_change:
+                genome.fitness += 10
+
             bird_cord = (bird.rect.x / game.width) * (bird.rect.y / game.height)
             if net.activate((bird_cord, bird.velocity, *balloons_posses))[0] > 0.5:
                 bird.jump()
-        remove_birds = []
-        for i, (bird, genome, _) in birds_mapping.items():
+
             if game.bird_collide_with_any(bird):
                 genome.fitness -= 1
                 remove_birds.append(i)
                 bird.kill()
-            if bird.score_change:
-                genome.fitness += 5
         for i in remove_birds:
             del birds_mapping[i]
         pygame.display.update()
