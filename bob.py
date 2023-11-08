@@ -1,5 +1,7 @@
-import pygame
 import random
+from abc import ABC, abstractmethod
+
+import pygame
 
 # Game variables
 SCREEN_WIDTH, SCREEN_HEIGHT = 600, 700
@@ -26,7 +28,14 @@ space_image = pygame.transform.scale(space_image, (SCREEN_WIDTH*2, space_image.g
 background = pygame.transform.scale(background, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
 
-class Bird(pygame.sprite.Sprite):
+
+class UpdateByGame(ABC):
+
+    @abstractmethod
+    def update(self, game: 'Game') -> None: ...
+
+
+class Bird(pygame.sprite.Sprite, UpdateByGame):
     def __init__(self, id: int = 0):
         super().__init__()
         self.image = bird_img
@@ -34,7 +43,7 @@ class Bird(pygame.sprite.Sprite):
         self.velocity = 0
         self.id = id
 
-    def update(self):
+    def update(self, game: 'Game'):
         self.velocity += GRAVITY
         self.rect.y += self.velocity
 
@@ -55,7 +64,7 @@ class Bird(pygame.sprite.Sprite):
         return False
 
 
-class Balloon(pygame.sprite.Sprite):
+class Balloon(pygame.sprite.Sprite, UpdateByGame):
     def __init__(self, position):
         super().__init__()
         self.image = green_balloon_img
@@ -68,7 +77,7 @@ class Balloon(pygame.sprite.Sprite):
         self.rect.height *= scale
         self._passed = False
 
-    def update(self):
+    def update(self, game: 'Game'):
         self.rect.x -= BALLOON_SPEED + self._balloon_jitter
         if self.rect.right < 0:
             self.kill()
@@ -89,7 +98,7 @@ class Ground(pygame.sprite.Sprite):
         self.rect[0] = 0
         self.rect[1] = SCREEN_HEIGHT - GROUND_HEIGHT
 
-    def update(self):
+    def update(self, game: 'Game'):
         self.rect.x -= BALLOON_SPEED
         if self.rect.right <= SCREEN_WIDTH:
             self.rect.left = 0
@@ -104,16 +113,15 @@ class Ceiling(pygame.sprite.Sprite):
         self.rect[0] = 0
         self.rect[1] = 0
 
-    def update(self):
+    def update(self, game: 'Game'):
         self.rect.x -= BALLOON_SPEED
         if self.rect.right <= SCREEN_WIDTH:
             self.rect.left = 0
 
 
 class Score(pygame.sprite.Sprite):
-    def __init__(self, x, y, screen):
+    def __init__(self, x, y):
         super().__init__()
-        self.screen = screen
         self.value = 0
         self.font = pygame.font.Font(None, 36)
         self.x = x
@@ -122,16 +130,16 @@ class Score(pygame.sprite.Sprite):
     def increase(self):
         self.value += 1
 
-    def update(self):
+    def update(self, game: 'Game'):
         score_text = self.font.render("Score: " + str(self.value), True, (0, 0, 0))
-        self.screen.blit(score_text, (self.x - score_text.get_width() // 2, self.y))
+        game.screen.blit(score_text, (self.x - score_text.get_width() // 2, self.y))
 
 
 class Game:
     def __init__(self, screen):
         self.screen = screen
         self.grounds = pygame.sprite.Group()
-        self.score = Score(SCREEN_WIDTH - 100, SCREEN_HEIGHT - 50, screen)
+        self.score = Score(SCREEN_WIDTH - 100, SCREEN_HEIGHT - 50)
         self.bird = Bird()
         self.balloons = pygame.sprite.Group()
         self.clock = pygame.time.Clock()
@@ -159,7 +167,7 @@ class Game:
             balloon = Balloon((SCREEN_WIDTH + BALLOON_WIDTH // 2, balloon_position))
             self.balloons.add(balloon)
         for upd in (self.bird, self.grounds, self.balloons, self.score):
-            upd.update()
+            upd.update(self)
         for blt in (self.bird, *self.grounds.sprites(), *self.balloons.sprites()):
             self.screen.blit(blt.image, blt.rect)
 
@@ -167,7 +175,7 @@ class Game:
         if self.stop:
             raise SystemExit()
         self.grounds = pygame.sprite.Group()
-        self.score = Score(SCREEN_WIDTH - 100, SCREEN_HEIGHT - 50, self.screen)
+        self.score = Score(SCREEN_WIDTH - 100, SCREEN_HEIGHT - 50)
         self.bird = Bird()
         self.balloons = pygame.sprite.Group()
         self.clock = pygame.time.Clock()
