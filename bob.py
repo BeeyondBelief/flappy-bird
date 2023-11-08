@@ -171,9 +171,34 @@ class Game:
         for upd in self.updated_by_game:
             upd.update(self)
 
+    def is_position_valid(self, new_balloon_position, existing_balloons, min_distance):
+        new_x, new_y = new_balloon_position
+        for balloon in existing_balloons:
+            balloon_x, balloon_y = balloon.rect.centerx, balloon.rect.centery
+            if (new_x - balloon_x < min_distance) and (abs(new_y - balloon_y) < min_distance):
+                return False
+        return True
+
     def spawn_balloon(self) -> None:
-        balloon_position = random.randint(10, SCREEN_HEIGHT - 80)
-        balloon = Balloon((SCREEN_WIDTH + BALLOON_WIDTH // 2, balloon_position))
+        if len(self.balloons) > 5:
+            return
+        balloon_radius = BALLOON_WIDTH // 2
+        min_distance = balloon_radius * 3
+
+        tries = 10
+        while tries:
+            balloon_center_x = SCREEN_WIDTH + balloon_radius
+            balloon_center_y = random.randint(balloon_radius, SCREEN_HEIGHT - balloon_radius)
+            new_balloon_position = (balloon_center_x, balloon_center_y)
+            if self.is_position_valid(new_balloon_position, self.balloons, min_distance):
+                break
+            tries -= 1
+        else:
+            return
+
+        # Calculate the position of the balloon
+        balloon_position = (balloon_center_x, balloon_center_y)
+        balloon = Balloon(balloon_position)
         self.balloons.add(balloon)
 
     def reset(self):
