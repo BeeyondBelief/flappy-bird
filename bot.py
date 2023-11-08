@@ -87,7 +87,7 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
             balloons_posses[i + 1] = abs(sprites[i].rect.y / spawner.balloon_spawn_bottom)
         for (bird, genome, net) in birds_mapping.values():
             genome.fitness += 0.1
-            if net.activate((bird.rect.y, *balloons_posses))[0] > 0.5:
+            if net.activate((bird.rect.y / game.height, bird.velocity, *balloons_posses))[0] > 0.5:
                 bird.jump()
 
         remove_birds = []
