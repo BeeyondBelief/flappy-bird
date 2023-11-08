@@ -2,10 +2,11 @@ import functools
 import pathlib
 import pickle
 from collections.abc import Callable
-import pygame
-import neat
 
-from bob import Bird, Game, BalloonSpawner
+import neat
+import pygame
+
+from bob import BalloonSpawner, Bird, Game
 
 
 class Bot:
@@ -80,16 +81,17 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
                 game.stop = True
         game.update()
 
-        balloons_posses = [0] * max_balloons * 2
+        balloons_posses = [-1] * max_balloons
         sprites = spawner.balloons.sprites()
-        for i in range(0, len(sprites), 2):
-            balloons_posses[i] = abs(sprites[i].rect.x / spawner.balloon_spawn_right)
-            balloons_posses[i + 1] = abs(sprites[i].rect.y / spawner.balloon_spawn_bottom)
+        for i in range(0, len(sprites)):
+            x = abs(sprites[i].rect.x / spawner.balloon_spawn_right)
+            y = abs(sprites[i].rect.y / spawner.balloon_spawn_bottom)
+            balloons_posses[i] = (x*y)
         for (bird, genome, net) in birds_mapping.values():
             genome.fitness += 0.1
-            if net.activate((bird.rect.y / game.height, bird.velocity, *balloons_posses))[0] > 0.5:
+            bird_cord = (bird.rect.x / game.width) * (bird.rect.y / game.height)
+            if net.activate((bird_cord, bird.velocity, *balloons_posses))[0] > 0.5:
                 bird.jump()
-
         remove_birds = []
         for i, (bird, genome, _) in birds_mapping.items():
             if game.bird_collide_with_any(bird):
@@ -100,7 +102,6 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
                 genome.fitness += 5
         for i in remove_birds:
             del birds_mapping[i]
-
         pygame.display.update()
 
 
