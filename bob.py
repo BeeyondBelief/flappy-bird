@@ -167,6 +167,9 @@ class Game:
         )
         self.updated_by_game: list[UpdateByGame] = [self.grounds, self.balloons]
 
+    def tick(self, framerate: float) -> None:
+        self.clock.tick(framerate)
+
     def attach_to_game(self, obj: UpdateByGame) -> None:
         self.updated_by_game.append(obj)
 
@@ -227,7 +230,7 @@ def run_once_for_player(game: 'Game', tick: int = 60):
     game.attach_to_game(bird)
     game.attach_to_game(score)
     while running:
-        game.clock.tick(tick)
+        game.tick(tick)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 game.stop = True
