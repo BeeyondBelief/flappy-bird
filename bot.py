@@ -48,6 +48,7 @@ class Net:
 
 def run_for_q_learning(game: Game) -> None:
     net = Net()
+    net.enable_reporter()
     net.run(functools.partial(_q_learning_game, game), 50)
 
 
