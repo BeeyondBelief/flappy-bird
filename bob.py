@@ -34,13 +34,24 @@ class UpdateByGame(ABC):
     def update(self, game: 'Game') -> None: ...
 
 
-class Bird(pygame.sprite.Sprite, UpdateByGame):
-    def __init__(self, id: int = 0):
+class UpdateSpriteGame(pygame.sprite.Sprite, UpdateByGame, ABC):
+    pass
+
+
+class UpdateGroupByGame(pygame.sprite.Group, UpdateByGame):
+    def add(self, *sprites: UpdateSpriteGame) -> None:
+        super().add(*sprites)
+
+    def update(self, game: 'Game') -> None:
+        super().update(game)
+
+
+class Bird(UpdateSpriteGame):
+    def __init__(self):
         super().__init__()
         self.image = bird_img
         self.rect = self.image.get_rect(center=(100, SCREEN_HEIGHT // 2))
         self.velocity = 0
-        self.id = id
         self.score = 0
 
     def update(self, game: 'Game'):
@@ -69,7 +80,7 @@ class Bird(pygame.sprite.Sprite, UpdateByGame):
         return False
 
 
-class Balloon(pygame.sprite.Sprite, UpdateByGame):
+class Balloon(UpdateSpriteGame):
     def __init__(self, position):
         super().__init__()
         self.image = green_balloon_img
@@ -95,7 +106,7 @@ class Balloon(pygame.sprite.Sprite, UpdateByGame):
         return False
 
 
-class Ground(pygame.sprite.Sprite):
+class Ground(UpdateSpriteGame):
     def __init__(self, width: float, height: float):
         super().__init__()
         self.image = pygame.Surface((width * 2, height))
@@ -111,7 +122,7 @@ class Ground(pygame.sprite.Sprite):
         game.screen.blit(self.image, self.rect)
 
 
-class Ceiling(pygame.sprite.Sprite):
+class Ceiling(UpdateSpriteGame):
     def __init__(self, width: float, height: float):
         super().__init__()
         self.image = pygame.Surface((width * 2, height))
@@ -127,7 +138,7 @@ class Ceiling(pygame.sprite.Sprite):
         game.screen.blit(self.image, self.rect)
 
 
-class Score(pygame.sprite.Sprite, UpdateByGame):
+class Score(UpdateSpriteGame):
     def __init__(self, x, y):
         super().__init__()
         self.value = 0
@@ -146,8 +157,8 @@ class Score(pygame.sprite.Sprite, UpdateByGame):
 class Game:
     def __init__(self, screen):
         self.screen = screen
-        self.grounds: pygame.sprite.Group[Ground | Ceiling] = pygame.sprite.Group()
-        self.balloons: pygame.sprite.Group[Balloon] = pygame.sprite.Group()
+        self.grounds = UpdateGroupByGame()
+        self.balloons = UpdateGroupByGame()
         self.clock = pygame.time.Clock()
         self.stop = False
         self.grounds.add(
@@ -171,14 +182,6 @@ class Game:
         for upd in self.updated_by_game:
             upd.update(self)
 
-    def is_position_valid(self, new_balloon_position, existing_balloons, min_distance):
-        new_x, new_y = new_balloon_position
-        for balloon in existing_balloons:
-            balloon_x, balloon_y = balloon.rect.centerx, balloon.rect.centery
-            if (new_x - balloon_x < min_distance) and (abs(new_y - balloon_y) < min_distance):
-                return False
-        return True
-
     def spawn_balloon(self) -> None:
         if len(self.balloons) > 5:
             return
@@ -190,7 +193,7 @@ class Game:
             balloon_center_x = SCREEN_WIDTH + balloon_radius
             balloon_center_y = random.randint(balloon_radius, SCREEN_HEIGHT - balloon_radius)
             new_balloon_position = (balloon_center_x, balloon_center_y)
-            if self.is_position_valid(new_balloon_position, self.balloons, min_distance):
+            if self._is_balloon_radius_free(new_balloon_position, min_distance):
                 break
             tries -= 1
         else:
@@ -201,18 +204,20 @@ class Game:
         balloon = Balloon(balloon_position)
         self.balloons.add(balloon)
 
+    def _is_balloon_radius_free(self, new_balloon_position: tuple[int, int], free_radius: float):
+        new_x, new_y = new_balloon_position
+        for balloon in self.balloons:
+            balloon_x, balloon_y = balloon.rect.centerx, balloon.rect.centery
+            if (new_x - balloon_x < free_radius) and (abs(new_y - balloon_y) < free_radius):
+                return False
+        return True
+
     def reset(self):
         if self.stop:
             raise SystemExit()
-        self.grounds = pygame.sprite.Group()
-        self.balloons = pygame.sprite.Group()
-        self.clock = pygame.time.Clock()
+        self.balloons = UpdateGroupByGame()
         self.stop = False
-        self.grounds.add(
-            Ground(SCREEN_WIDTH, GROUND_HEIGHT),
-            Ceiling(SCREEN_WIDTH, CEILING_HEIGHT)
-        )
-        self.updated_by_game = [self.grounds, self.balloons]
+        self.updated_by_game: list[UpdateByGame] = [self.grounds, self.balloons]
 
 
 def run_once_for_player(game: 'Game', tick: int = 60):
@@ -233,6 +238,7 @@ def run_once_for_player(game: 'Game', tick: int = 60):
         game.update()
         score.value = bird.score
         if game.bird_collide_with_any(bird):
+            bird.kill()
             running = False
         pygame.display.update()
 
