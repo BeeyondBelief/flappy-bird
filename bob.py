@@ -47,10 +47,10 @@ class UpdateGroupByGame(pygame.sprite.Group, UpdateByGame):
 
 
 class Bird(UpdateSpriteGame):
-    def __init__(self):
+    def __init__(self, position: tuple[float, float]):
         super().__init__()
         self.image = bird_img
-        self.rect = self.image.get_rect(center=(100, SCREEN_HEIGHT // 2))
+        self.rect = self.image.get_rect(center=position)
         self.velocity = 0
         self.score = 0
 
@@ -155,7 +155,7 @@ class Score(UpdateSpriteGame):
 
 
 class Game:
-    def __init__(self, screen):
+    def __init__(self, screen: pygame.surface.Surface):
         self.screen = screen
         self.grounds = UpdateGroupByGame()
         self.balloons = UpdateGroupByGame()
@@ -222,8 +222,8 @@ class Game:
 
 def run_once_for_player(game: 'Game', tick: int = 60):
     running = True
-    score = Score(SCREEN_WIDTH - 100, SCREEN_HEIGHT - 50)
-    bird = Bird()
+    score = Score(SCREEN_WIDTH * 0.85, SCREEN_HEIGHT - GROUND_HEIGHT * 2)
+    bird = Bird((SCREEN_WIDTH * 0.2, SCREEN_HEIGHT // 3))
     game.attach_to_game(bird)
     game.attach_to_game(score)
     while running:
