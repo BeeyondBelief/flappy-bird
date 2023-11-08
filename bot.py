@@ -107,5 +107,41 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
         pygame.display.update()
 
 
+def replay_with_genome(game: Game, genome: neat.DefaultGenome, config: neat.Config):
+    max_balloons = 5
+    spawner = BalloonSpawner(max_balloons)
+    game.add_spawner(spawner)
+    bird = Bird((game.width * 0.2, game.height // 3))
+    net = neat.nn.FeedForwardNetwork.create(genome, config)
+    game.attach_to_game(bird)
+    running = True
+    while running:
+        game.tick()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                game.stop = True
+        game.update()
+
+        balloons_posses = [-1] * max_balloons
+        sprites = spawner.balloons.sprites()
+        for i in range(0, len(sprites)):
+            x = abs(sprites[i].rect.x / spawner.balloon_spawn_right)
+            y = abs(sprites[i].rect.y / spawner.balloon_spawn_bottom)
+            balloons_posses[i] = (x * y)
+
+        bird_cord = (bird.rect.x / game.width) * (bird.rect.y / game.height)
+        if net.activate((bird_cord, bird.velocity, *balloons_posses))[0] > 0.5:
+            bird.jump()
+
+        if game.bird_collide_with_any(bird):
+            bird.kill()
+            running = False
+        pygame.display.update()
+
+
 if __name__ == '__main__':
-    run_for_q_learning(Game(screen=pygame.display.set_mode((600, 700)), framerate=120))
+    game = Game(screen=pygame.display.set_mode((600, 700)), framerate=60)
+    run_for_q_learning(game)
+    replay_with_genome(game, pickle.load(open(pathlib.Path(__file__).parent / 'dump.obj', 'rb')),
+                       Net._load_config(pathlib.Path(__file__).parent / 'feedforward.conf'))
