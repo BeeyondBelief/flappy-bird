@@ -80,9 +80,10 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
         for (bird, genome, net) in birds_mapping.values():
             genome.fitness += 0.1
             balloons_posses = [0] * max_balloons * 2
-            for i, x in enumerate(spawner.balloons.sprites()):
-                balloons_posses[i] = x.rect.x
-                balloons_posses[i+1] = x.rect.y
+            sprites = spawner.balloons.sprites()
+            for i in range(0, len(sprites), 2):
+                balloons_posses[i] = sprites[i].rect.x
+                balloons_posses[i+1] = sprites[i].rect.y
             if net.activate((bird.rect.y, *balloons_posses))[0] > 0.5:
                 bird.jump()
 
