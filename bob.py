@@ -146,17 +146,17 @@ class Score(pygame.sprite.Sprite, UpdateByGame):
 class Game:
     def __init__(self, screen):
         self.screen = screen
-        self.grounds = pygame.sprite.Group()
-        self.balloons = pygame.sprite.Group()
+        self.grounds: pygame.sprite.Group[Ground | Ceiling] = pygame.sprite.Group()
+        self.balloons: pygame.sprite.Group[Balloon] = pygame.sprite.Group()
         self.clock = pygame.time.Clock()
         self.stop = False
         self.grounds.add(
             Ground(SCREEN_WIDTH, GROUND_HEIGHT),
             Ceiling(SCREEN_WIDTH, CEILING_HEIGHT)
         )
-        self.updated_by_game = [self.grounds, self.balloons]
+        self.updated_by_game: list[UpdateByGame] = [self.grounds, self.balloons]
 
-    def attach_to_game(self, obj: pygame.sprite.Sprite) -> None:
+    def attach_to_game(self, obj: UpdateByGame) -> None:
         self.updated_by_game.append(obj)
 
     def bird_collide_with_any(self, bird: Bird) -> bool:
@@ -166,12 +166,15 @@ class Game:
 
     def update(self):
         self.screen.blit(background, background.get_rect())
-        if pygame.time.get_ticks() % BALLOON_SPAWN_RATE == 0 and len(self.balloons) < 10:
-            balloon_position = random.randint(10, SCREEN_HEIGHT-80)
-            balloon = Balloon((SCREEN_WIDTH + BALLOON_WIDTH // 2, balloon_position))
-            self.balloons.add(balloon)
+        if pygame.time.get_ticks() % BALLOON_SPAWN_RATE == 0:
+            self.spawn_balloon()
         for upd in self.updated_by_game:
             upd.update(self)
+
+    def spawn_balloon(self) -> None:
+        balloon_position = random.randint(10, SCREEN_HEIGHT - 80)
+        balloon = Balloon((SCREEN_WIDTH + BALLOON_WIDTH // 2, balloon_position))
+        self.balloons.add(balloon)
 
     def reset(self):
         if self.stop:
