@@ -53,6 +53,7 @@ class Bird(UpdateSpriteGame):
         self.rect = self.image.get_rect(center=position)
         self.velocity = 0
         self.score = 0
+        self.score_change = 0
 
     def update(self, game: 'Game'):
         self.velocity += GRAVITY
@@ -65,7 +66,8 @@ class Bird(UpdateSpriteGame):
         else:
             self.image = bird_downflap_img
 
-        self.score += game.bird_fly_balloons_count_diff(self)
+        self.score_change = game.bird_fly_balloons_count_diff(self)
+        self.score += self.score_change
         game.screen.blit(self.image, self.rect)
 
     def jump(self):
