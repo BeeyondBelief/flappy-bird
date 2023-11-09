@@ -211,7 +211,7 @@ class Game:
         self.height = screen.get_height()
         self.grounds = UpdateGroupByGame()
         self.clock = pygame.time.Clock()
-        self.stop = False
+        self.exit = False
         self.grounds.add(
             Ground(SCREEN_WIDTH, GROUND_HEIGHT),
             Ceiling(SCREEN_WIDTH, CEILING_HEIGHT)
@@ -219,8 +219,14 @@ class Game:
         self.updated_by_game: list[UpdateByGame] = [self.grounds]
         self.spawners: list[BalloonSpawner] = []
 
-    def tick(self) -> None:
+    def tick(self) -> list[pygame.event.Event]:
         self.clock.tick(self.framerate)
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.QUIT:
+                self.exit = True
+        self.update()
+        return events
 
     def attach_to_game(self, obj: UpdateByGame) -> None:
         self.updated_by_game.append(obj)
@@ -246,9 +252,9 @@ class Game:
             upd.update(self)
 
     def reset(self):
-        if self.stop:
+        if self.exit:
             raise SystemExit()
-        self.stop = False
+        self.exit = False
         self.updated_by_game: list[UpdateByGame] = [self.grounds]
         self.spawners = []
 
@@ -261,15 +267,12 @@ def run_once_for_player(game: 'Game'):
     game.attach_to_game(bird)
     game.attach_to_game(score)
     while running:
-        game.tick()
-        for event in pygame.event.get():
+        for event in game.tick():
             if event.type == pygame.QUIT:
-                game.stop = True
                 running = False
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     bird.jump()
-        game.update()
         score.value = bird.score
         if game.bird_collide_with_any(bird):
             bird.kill()

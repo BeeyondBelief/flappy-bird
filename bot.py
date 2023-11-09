@@ -70,16 +70,8 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
     max_balloons = 5
     spawner = BalloonSpawner(max_balloons)
     game.add_spawner(spawner)
-    running = True
-    while running:
-        if len(birds_mapping) == 0:
-            break
+    while len(birds_mapping) > 0:
         game.tick()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-                game.stop = True
-        game.update()
 
         balloons_posses = [-1] * max_balloons
         sprites = spawner.balloons.sprites()
@@ -116,12 +108,9 @@ def replay_with_genome(game: Game, genome: neat.DefaultGenome, config: neat.Conf
     game.attach_to_game(bird)
     running = True
     while running:
-        game.tick()
-        for event in pygame.event.get():
+        for event in game.tick():
             if event.type == pygame.QUIT:
                 running = False
-                game.stop = True
-        game.update()
 
         balloons_posses = [-1] * max_balloons
         sprites = spawner.balloons.sprites()
