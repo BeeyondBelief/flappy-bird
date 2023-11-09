@@ -11,7 +11,7 @@ BALLOON_WIDTH = 100
 BIRD_JUMP = 11
 GRAVITY = 0.85
 BALLOON_SPEED = 4
-BALLOON_SPAWN_RATE = 20
+BALLOON_SPAWN_RATE = 0.5
 
 # Load images
 bird_img = pygame.image.load('assets/sprites/bluebird-midflap.png')
@@ -176,7 +176,7 @@ class BalloonSpawner(UpdateByGame):
 
     def update(self, game: 'Game') -> None:
         self.balloons.update(game)
-        if (pygame.time.get_ticks() % BALLOON_SPAWN_RATE == 0
+        if (random.random() < BALLOON_SPAWN_RATE
                 and len(self.balloons) < self.max_balloons_in_screen):
             self.spawn_balloon()
 
