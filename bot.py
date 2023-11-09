@@ -67,18 +67,12 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
         )
         game.attach_to_game(birds_mapping[genome_id][0])
         genome.fitness = 0
-    max_balloons = 5
-    spawner = BalloonSpawner(max_balloons)
+    spawner = BalloonSpawner(max_balloons_in_screen=5)
     game.add_spawner(spawner)
     while len(birds_mapping) > 0:
         game.tick()
 
-        balloons_posses = [-1] * max_balloons
-        sprites = spawner.balloons.sprites()
-        for i in range(0, len(sprites)):
-            x = abs(sprites[i].rect.x / spawner.balloon_spawn_right)
-            y = abs(sprites[i].rect.y / spawner.balloon_spawn_bottom)
-            balloons_posses[i] = (x*y)
+        balloons_posses = get_balloon_coordinates(spawner)
         remove_birds = []
         for i, (bird, genome, net) in birds_mapping.items():
             genome.fitness += 0.1
@@ -86,9 +80,7 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
             if bird.score_change:
                 genome.fitness += 10
 
-            bird_cord = (bird.rect.x / game.width) * (bird.rect.y / game.height)
-            if net.activate((bird_cord, bird.velocity, *balloons_posses))[0] > 0.5:
-                bird.jump()
+            bird_do_action_by_net(bird, balloons_posses, net)
 
             if game.bird_collide_with_any(bird):
                 genome.fitness -= 1
@@ -112,21 +104,30 @@ def replay_with_genome(game: Game, genome: neat.DefaultGenome, config: neat.Conf
             if event.type == pygame.QUIT:
                 running = False
 
-        balloons_posses = [-1] * max_balloons
-        sprites = spawner.balloons.sprites()
-        for i in range(0, len(sprites)):
-            x = abs(sprites[i].rect.x / spawner.balloon_spawn_right)
-            y = abs(sprites[i].rect.y / spawner.balloon_spawn_bottom)
-            balloons_posses[i] = (x * y)
-
-        bird_cord = (bird.rect.x / game.width) * (bird.rect.y / game.height)
-        if net.activate((bird_cord, bird.velocity, *balloons_posses))[0] > 0.5:
-            bird.jump()
+        balloons_posses = get_balloon_coordinates(spawner)
+        bird_do_action_by_net(bird, balloons_posses, net)
 
         if game.bird_collide_with_any(bird):
             bird.kill()
             running = False
         pygame.display.update()
+
+
+def bird_do_action_by_net(bird: Bird, balloon_coordinates: list[float],
+                          net: neat.nn.FeedForwardNetwork) -> None:
+    bird_cord = (bird.rect.x / game.width) * (bird.rect.y / game.height)
+    if net.activate((bird_cord, bird.velocity, *balloon_coordinates))[0] > 0.5:
+        bird.jump()
+
+
+def get_balloon_coordinates(spawner: BalloonSpawner) -> list[float]:
+    balloons_posses = [-1] * spawner.max_balloons_in_screen
+    sprites = spawner.balloons.sprites()
+    for i in range(0, len(sprites)):
+        x = abs(sprites[i].rect.x / spawner.balloon_spawn_right)
+        y = abs(sprites[i].rect.y / spawner.balloon_spawn_bottom)
+        balloons_posses[i] = (x * y)
+    return balloons_posses
 
 
 if __name__ == '__main__':
