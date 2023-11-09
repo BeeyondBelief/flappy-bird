@@ -1,6 +1,8 @@
 import functools
+import math
 import pathlib
 import pickle
+import random
 from collections.abc import Callable
 
 import neat
@@ -51,7 +53,7 @@ class Net:
 def run_for_q_learning(game: Game) -> None:
     net = Net()
     net.enable_reporter()
-    best = net.run(functools.partial(_q_learning_game, game), 100)
+    best = net.run(functools.partial(_q_learning_game, game), None)
     with open('dump.obj', 'wb') as f:
         pickle.dump(best, f)
 
@@ -80,7 +82,7 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
             if bird.score_change:
                 genome.fitness += 10
 
-            bird_do_action_by_net(bird, balloons_posses, net)
+            bird_do_action_by_net(game, bird, balloons_posses, net)
 
             if game.bird_collide_with_any(bird):
                 genome.fitness -= 1
@@ -89,6 +91,7 @@ def _q_learning_game(game: Game, gens: list[tuple[int, neat.DefaultGenome]], con
         for i in remove_birds:
             del birds_mapping[i]
         pygame.display.update()
+    random.seed(None)
 
 
 def replay_with_genome(game: Game, genome: neat.DefaultGenome, config: neat.Config):
@@ -105,7 +108,7 @@ def replay_with_genome(game: Game, genome: neat.DefaultGenome, config: neat.Conf
                 running = False
 
         balloons_posses = get_balloon_coordinates(spawner)
-        bird_do_action_by_net(bird, balloons_posses, net)
+        bird_do_action_by_net(game, bird, balloons_posses, net)
 
         if game.bird_collide_with_any(bird):
             bird.kill()
@@ -113,25 +116,51 @@ def replay_with_genome(game: Game, genome: neat.DefaultGenome, config: neat.Conf
         pygame.display.update()
 
 
-def bird_do_action_by_net(bird: Bird, balloon_coordinates: list[float],
+def bird_do_action_by_net(game: Game, bird: Bird, balloon_coordinates: list[tuple[float, float]],
                           net: neat.nn.FeedForwardNetwork) -> None:
-    bird_cord = (bird.rect.x / game.width) * (bird.rect.y / game.height)
-    if net.activate((bird_cord, bird.velocity, *balloon_coordinates))[0] > 0.5:
+    bird_x = bird.rect.x / game.width
+    bird_y = bird.rect.y / game.height
+    closest_above = float('+inf')
+    closest_above_y = -1
+    closest_below = float('+inf')
+    closest_below_y = 1
+    closest_front = float('+inf')
+
+    closest_3_coords = [1, -1, -1, -1, 1, 1]
+    for x, y in balloon_coordinates:
+        if x < bird_x:
+            continue
+        distance = math.sqrt((bird_y - y) ** 2 + (bird_x - x) ** 2)
+        if distance < closest_above and bird_y > y > closest_above_y:
+            closest_above = distance
+            closest_above_y = y
+            closest_3_coords[0] = x
+            closest_3_coords[1] = y
+        elif distance < closest_below and (bird_y < y < closest_below_y):
+            closest_below = distance
+            closest_below_y = y
+            closest_3_coords[4] = x
+            closest_3_coords[5] = y
+        elif distance < closest_front and y + closest_above > bird_y > y - closest_below_y:
+            closest_front = distance
+            closest_3_coords[2] = x
+            closest_3_coords[3] = y
+    if net.activate((game.height - bird_y, bird_y, bird.velocity, *closest_3_coords))[0] > 0.5:
         bird.jump()
 
 
-def get_balloon_coordinates(spawner: BalloonSpawner) -> list[float]:
-    balloons_posses = [-1] * spawner.max_balloons_in_screen
+def get_balloon_coordinates(spawner: BalloonSpawner) -> list[tuple[float, float]]:
+    balloons_posses = [(-1.0, -1.0)] * spawner.max_balloons_in_screen
     sprites = spawner.balloons.sprites()
     for i in range(0, len(sprites)):
         x = abs(sprites[i].rect.x / spawner.balloon_spawn_right)
         y = abs(sprites[i].rect.y / spawner.balloon_spawn_bottom)
-        balloons_posses[i] = (x * y)
+        balloons_posses[i] = x, y
     return balloons_posses
 
 
 if __name__ == '__main__':
     game = Game(screen=pygame.display.set_mode((600, 700)), framerate=60)
-    run_for_q_learning(game)
+    # run_for_q_learning(game)
     replay_with_genome(game, pickle.load(open(pathlib.Path(__file__).parent / 'dump.obj', 'rb')),
                        Net._load_config(pathlib.Path(__file__).parent / 'feedforward.conf'))
