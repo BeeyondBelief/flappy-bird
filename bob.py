@@ -54,6 +54,7 @@ class Bird(UpdateSpriteGame):
         self.velocity = 0
         self.score = 0
         self.score_change = 0
+        self._balloons_behind = 0
 
     def update(self, game: 'Game'):
         self.velocity += GRAVITY
@@ -66,8 +67,10 @@ class Bird(UpdateSpriteGame):
         else:
             self.image = bird_downflap_img
 
-        self.score_change = game.bird_fly_balloons_count_diff(self)
+        balloons_behind = game.bird_balloons_behind(self)
+        self.score_change = 1 if balloons_behind > self._balloons_behind else 0
         self.score += self.score_change
+        self._balloons_behind = balloons_behind
         game.screen.blit(self.image, self.rect)
 
     def jump(self):
@@ -91,7 +94,6 @@ class Balloon(UpdateSpriteGame):
         scale = 0.9
         self.rect.width *= scale
         self.rect.height *= scale
-        self._passed = False
 
     def update(self, game: 'Game'):
         self.rect.x -= BALLOON_SPEED + self._balloon_jitter
@@ -100,8 +102,7 @@ class Balloon(UpdateSpriteGame):
         game.screen.blit(self.image, self.rect)
 
     def check_passed(self, bird: Bird) -> bool:
-        if self.rect.right < bird.rect.left and not self._passed:
-            self._passed = True
+        if self.rect.right < bird.rect.left:
             return True
         return False
 
@@ -167,7 +168,7 @@ class BalloonSpawner(UpdateByGame):
     def group(self) -> pygame.sprite.Group:
         return self.balloons
 
-    def bird_fly_balloons_diff(self, bird: Bird) -> int:
+    def bird_balloons_behind(self, bird: Bird) -> int:
         count = 0
         for b in self.balloons:
             if b.check_passed(bird):
@@ -240,10 +241,10 @@ class Game:
             return True
         return False
 
-    def bird_fly_balloons_count_diff(self, bird: Bird) -> int:
+    def bird_balloons_behind(self, bird: Bird) -> int:
         count = 0
         for spawner in self.spawners:
-            count += spawner.bird_fly_balloons_diff(bird)
+            count += spawner.bird_balloons_behind(bird)
         return count
 
     def update(self):
