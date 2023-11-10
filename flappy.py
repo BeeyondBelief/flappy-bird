@@ -265,9 +265,8 @@ class Game:
     def reset(self):
         if self.exit:
             raise SystemExit()
-        self.exit = False
-        self.updated_by_game: list[UpdateByGame] = [self.grounds]
-        self.spawners = []
+        self.updated_by_game = [self.grounds]
+        self.spawners.clear()
 
 
 def run_once_for_player(game: 'Game'):
