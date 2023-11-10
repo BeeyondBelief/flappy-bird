@@ -8,7 +8,7 @@ from collections.abc import Callable
 import neat
 import pygame
 
-from bob import BalloonSpawner, Bird, Game
+from flappy import BalloonSpawner, Bird, Game
 
 
 class Bot:
