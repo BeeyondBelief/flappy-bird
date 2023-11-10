@@ -2,6 +2,7 @@ import functools
 import math
 import pathlib
 import pickle
+import random
 from collections.abc import Callable
 
 import neat
@@ -31,9 +32,10 @@ class Bot:
 
 
 class Net:
-    def __init__(self):
+    def __init__(self, render_screen: bool = True):
         self.config = self._load_config(pathlib.Path(__file__).parent / 'feedforward.conf')
         self.max_balloons = 5
+        self.render_screen = render_screen
         self._p = neat.Population(self.config)
 
     def enable_reporter(self):
@@ -89,8 +91,7 @@ class Net:
 
         self._game_loop(game, on_game_tick)
 
-    @staticmethod
-    def _game_loop(game: Game, game_tick_action: Callable[[], bool]):
+    def _game_loop(self, game: Game, game_tick_action: Callable[[], bool]):
         running = True
         while running:
             for event in game.tick():
@@ -99,7 +100,8 @@ class Net:
 
             if game_tick_action():
                 running = False
-            pygame.display.update()
+            if self.render_screen:
+                pygame.display.update()
 
     def _spawn_balloon_spawner(self, game: Game) -> BalloonSpawner:
         spawner = BalloonSpawner(max_balloons_in_screen=self.max_balloons)
@@ -153,8 +155,15 @@ class Net:
 
 
 def main():
-    game = Game(screen=pygame.display.set_mode((600, 700)), framerate=360)
-    net = Net()
+    render_screen = False
+
+    if render_screen:
+        screen = pygame.display.set_mode((600, 700))
+    else:
+        screen = pygame.display.set_mode((600, 700), flags=pygame.HIDDEN)
+
+    game = Game(screen=screen, framerate=360)
+    net = Net(render_screen=render_screen)
     net.enable_reporter()
     dump_path = pathlib.Path('dump.obj')
 
