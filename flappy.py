@@ -195,6 +195,16 @@ class BalloonSpawner(UpdateByGame):
             return
         self.balloons.add(Balloon((self.balloon_spawn_right, balloon_center_y)))
 
+    def get_balloon_coordinates(self, default_pos: tuple[float, float] = (-1.0, -1.0)) \
+            -> list[tuple[float, float]]:
+        balloons_posses = [default_pos] * self.max_balloons_in_screen
+        sprites = self.balloons.sprites()
+        for i in range(0, len(sprites)):
+            x = abs(sprites[i].rect.x / self.balloon_spawn_right)
+            y = abs(sprites[i].rect.y / self.balloon_spawn_bottom)
+            balloons_posses[i] = x, y
+        return balloons_posses
+
     def _is_balloon_radius_free(self, new_balloon_position: tuple[int, int], free_radius: float):
         new_x, new_y = new_balloon_position
         for balloon in self.balloons:
