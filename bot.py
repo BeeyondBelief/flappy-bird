@@ -2,7 +2,6 @@ import functools
 import math
 import pathlib
 import pickle
-import random
 from collections.abc import Callable
 
 import neat
@@ -39,8 +38,7 @@ class Net:
         self._p = neat.Population(self.config)
 
     def enable_reporter(self):
-        self._p.add_reporter(neat.StdOutReporter(show_species_detail=True))
-        self._p.add_reporter(neat.StatisticsReporter())
+        self._p.add_reporter(neat.StdOutReporter(show_species_detail=False))
 
     def replay_with_genome(self, game: Game, genome_dump: pathlib.Path):
         spawner = self._spawn_balloon_spawner(game)
@@ -71,12 +69,11 @@ class Net:
             ) for gen_id, genome_ in gens
         }
         spawner = self._spawn_balloon_spawner(game)
-
         def on_game_tick():
             balloons_posses = spawner.get_balloon_coordinates()
             for key in list(birds_mapping.keys()):
                 bird, genome, net = birds_mapping[key]
-                genome.fitness += 0.1
+                genome.fitness += 0.01
 
                 if bird.score_change:
                     genome.fitness += 10
@@ -84,7 +81,7 @@ class Net:
                 self._bird_do_action_by_net(game, bird, balloons_posses, net)
 
                 if game.bird_collide_with_any(bird):
-                    genome.fitness -= 1
+                    genome.fitness -= 5
                     bird.kill()
                     del birds_mapping[key]
             return len(birds_mapping) == 0
@@ -123,52 +120,67 @@ class Net:
     def _bird_do_action_by_net(game: Game, bird: Bird,
                                balloon_coordinates: list[tuple[float, float]],
                                net: neat.nn.FeedForwardNetwork) -> None:
-        bird_x = bird.rect.x / game.width
-        bird_y = bird.rect.y / game.height
-        closest_above = float('+inf')
-        closest_above_y = -1
-        closest_below = float('+inf')
-        closest_below_y = 1
-        closest_front = float('+inf')
+        bird_x_normal = bird.rect.x / game.width
+        bird_y_normal = bird.rect.y / game.height
 
-        closest_3_coords = [1, -1, -1, -1, 1, 1]
+        # # x, y, distance
+        # nearest = {
+        #     'above': (1.0, 0, 1.0),
+        #     'below': (1.0, 1.0, 1.0),
+        #     'front': (1.0, 1.0, 1.0)
+        # }
+        # for x, y in balloon_coordinates:
+        #     if (x + bird.rect.width / game.width) < bird_x_normal:
+        #         continue
+        #     distance = math.sqrt((bird_y_normal - y) ** 2 + (bird_x_normal - x) ** 2)
+        #     above = nearest['above']
+        #     below = nearest['below']
+        #     front = nearest['front']
+        #     if distance > above[2] and distance > below[2] and distance > front[2]:
+        #         continue
+        #     if bird_y_normal > y > above[1]:
+        #         nearest['above'] = (x, y, distance)
+        #     elif bird_y_normal < y < below[1]:
+        #         nearest['below'] = (x, y, distance)
+        #     elif y + above[1] > bird_y_normal > y - below[1]:
+        #         nearest['front'] = (x, y, distance)
+
+        # input_params = (
+        #     bird_y_normal,
+        #     bird.velocity,
+        #     bird.score,
+        #     *nearest['above'],
+        #     *nearest['front'],
+        #     *nearest['below'],
+        # )
+        with_distance = []
         for x, y in balloon_coordinates:
-            if x < bird_x:
-                continue
-            distance = math.sqrt((bird_y - y) ** 2 + (bird_x - x) ** 2)
-            if distance < closest_above and bird_y > y > closest_above_y:
-                closest_above = distance
-                closest_above_y = y
-                closest_3_coords[0] = x
-                closest_3_coords[1] = y
-            elif distance < closest_below and (bird_y < y < closest_below_y):
-                closest_below = distance
-                closest_below_y = y
-                closest_3_coords[4] = x
-                closest_3_coords[5] = y
-            elif distance < closest_front and y + closest_above > bird_y > y - closest_below_y:
-                closest_front = distance
-                closest_3_coords[2] = x
-                closest_3_coords[3] = y
-        if net.activate((game.height - bird_y, bird_y, bird.velocity, *closest_3_coords))[0] > 0.5:
+            with_distance.extend([x, y,
+                                  math.sqrt((bird_y_normal - y) ** 2 + (bird_x_normal - x) ** 2)])
+        input_params = (
+            bird_y_normal,
+            bird.velocity,
+            bird.score,
+            *with_distance
+        )
+        if net.activate(input_params)[0] > 0.5:
             bird.jump()
 
 
 def main():
-    render_screen = False
-
+    render_screen = True
     if render_screen:
         screen = pygame.display.set_mode((600, 700))
     else:
         screen = pygame.display.set_mode((600, 700), flags=pygame.HIDDEN)
 
-    game = Game(screen=screen, framerate=360)
+    game = Game(screen=screen, framerate=60)
     net = Net(render_screen=render_screen)
     net.enable_reporter()
     dump_path = pathlib.Path('dump.obj')
 
-    net.run_learning(game, dump_path)
-    # net.replay_with_genome(game, dump_path)
+    # net.run_learning(game, dump_path, 1000)
+    net.replay_with_genome(game, dump_path)
 
 
 if __name__ == '__main__':
