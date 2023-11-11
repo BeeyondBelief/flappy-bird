@@ -54,6 +54,7 @@ class Bird(UpdateSpriteGame):
         self.velocity = 0
         self.score = 0
         self.score_change = 0
+        self.last_jump_y = 0
         self._balloons_behind = 0
 
     def update(self, game: 'Game'):
@@ -74,6 +75,7 @@ class Bird(UpdateSpriteGame):
         game.screen.blit(self.image, self.rect)
 
     def jump(self):
+        self.last_jump_y = self.rect.y
         self.velocity = -BIRD_JUMP
 
     def collide_with_any(self, groups: list[pygame.sprite.Group]) -> bool:

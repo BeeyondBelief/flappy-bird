@@ -47,7 +47,8 @@ class Net:
         net = neat.nn.FeedForwardNetwork.create(pickle.load(genome_dump.open('rb')), self.config)
 
         def on_game_tick():
-            self._bird_do_action_by_net(game, bird, spawner.get_balloon_coordinates(), net)
+            if self._is_bird_need_jump(game, bird, spawner.get_balloon_coordinates(), net):
+                bird.jump()
             if game.bird_collide_with_any(bird):
                 bird.kill()
                 return True
@@ -90,7 +91,10 @@ class Net:
                 if bird.score_change:
                     genome.fitness += 10
 
-                self._bird_do_action_by_net(game, bird, balloons_posses, net)
+                if self._is_bird_need_jump(game, bird, balloons_posses, net):
+                    if bird.last_jump_y == bird.rect.y:
+                        genome.fitness -= 2
+                    bird.jump()
 
                 if game.bird_collide_with_any(bird):
                     genome.fitness -= 5
@@ -129,9 +133,9 @@ class Net:
                            neat.DefaultStagnation, path)
 
     @staticmethod
-    def _bird_do_action_by_net(game: Game, bird: Bird,
-                               balloon_coordinates: list[tuple[float, float]],
-                               net: neat.nn.FeedForwardNetwork) -> None:
+    def _is_bird_need_jump(game: Game, bird: Bird,
+                           balloon_coordinates: list[tuple[float, float]],
+                           net: neat.nn.FeedForwardNetwork) -> bool:
         bird_x_normal = bird.rect.x / game.width
         bird_y_normal = bird.rect.y / game.height
 
@@ -176,7 +180,8 @@ class Net:
             *with_distance
         )
         if net.activate(input_params)[0] > 0.5:
-            bird.jump()
+            return True
+        return False
 
 
 def main():
