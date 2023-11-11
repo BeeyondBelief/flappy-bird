@@ -2,6 +2,7 @@ import functools
 import math
 import pathlib
 import pickle
+import random
 from collections.abc import Callable
 
 import neat
@@ -54,12 +55,22 @@ class Net:
         self._game_loop(game, on_game_tick)
 
     def run_learning(self, game: Game, dump: pathlib.Path, times: int = 100) -> None:
-        best = self._p.run(functools.partial(self._q_learning_game, game), times)
-        with open(dump.as_posix(), 'wb') as f:
-            pickle.dump(best, f)
+        each_dump = functools.partial(self._dump_each_generation, dump, 100)
+        self._p.run(functools.partial(self._q_learning_game, game, each_dump), times)
+        self._dump_best_genome(dump)
 
-    def _q_learning_game(self, game: Game, gens: list[tuple[int, neat.DefaultGenome]],
+    def _dump_best_genome(self, dump_path: pathlib.Path) -> None:
+        with open(dump_path.as_posix(), 'wb') as f:
+            pickle.dump(self._p.best_genome, f)
+
+    def _dump_each_generation(self, dump_path: pathlib.Path, generation_step: int = 100):
+        if (self._p.generation+1) % generation_step == 0:
+            self._dump_best_genome(dump_path)
+
+    def _q_learning_game(self, game: Game, dump: Callable[..., None],
+                         gens: list[tuple[int, neat.DefaultGenome]],
                          config: neat.Config) -> None:
+        dump()
         game.reset()
         birds_mapping: dict[int, tuple[Bird, neat.DefaultGenome, neat.nn.FeedForwardNetwork]] = {
             gen_id: (
@@ -69,6 +80,7 @@ class Net:
             ) for gen_id, genome_ in gens
         }
         spawner = self._spawn_balloon_spawner(game)
+        random.seed(random.randint(0, 10))
         def on_game_tick():
             balloons_posses = spawner.get_balloon_coordinates()
             for key in list(birds_mapping.keys()):
