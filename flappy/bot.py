@@ -196,8 +196,8 @@ def main():
     net.enable_reporter()
     dump_path = pathlib.Path('dump.obj')
 
-    # net.run_learning(game, dump_path, 1000)
-    net.replay_with_genome(game, dump_path)
+    net.run_learning(game, dump_path, 1000)
+    #net.replay_with_genome(game, dump_path)
 
 
 if __name__ == '__main__':

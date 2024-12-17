@@ -14,14 +14,14 @@ BALLOON_SPEED = 4
 BALLOON_SPAWN_RATE = 0.5
 
 # Load images
-bird_img = pygame.image.load('assets/sprites/bluebird-midflap.png')
-bird_upflap_img = pygame.image.load('assets/sprites/bluebird-upflap.png')
-bird_downflap_img = pygame.image.load('assets/sprites/bluebird-downflap.png')
-green_balloon_img = pygame.image.load('assets/sprites/balloon-green.png')
-red_balloon_img = pygame.image.load('assets/sprites/balloon-red.png')
-background = pygame.image.load('assets/sprites/background-night.png')
-ground_image = pygame.image.load('assets/sprites/base.png')
-space_image = pygame.image.load('assets/sprites/space.png')
+bird_img = pygame.image.load('flappy/assets/sprites/bluebird-midflap.png')
+bird_upflap_img = pygame.image.load('flappy/assets/sprites/bluebird-upflap.png')
+bird_downflap_img = pygame.image.load('flappy/assets/sprites/bluebird-downflap.png')
+green_balloon_img = pygame.image.load('flappy/assets/sprites/balloon-green.png')
+red_balloon_img = pygame.image.load('flappy/assets/sprites/balloon-red.png')
+background = pygame.image.load('flappy/assets/sprites/background-night.png')
+ground_image = pygame.image.load('flappy/assets/sprites/base.png')
+space_image = pygame.image.load('flappy/assets/sprites/space.png')
 
 ground_image = pygame.transform.scale(ground_image, (SCREEN_WIDTH*2, ground_image.get_height()))
 space_image = pygame.transform.scale(space_image, (SCREEN_WIDTH*2, space_image.get_height()))

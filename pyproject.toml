@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "flappy_bird"
 version = '0.0.1'
 description = ""
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 authors = [
     { name = "Зорин Никита Евгеньевич", email = "nikita00zorinnn@mail.ru" },
 ]
